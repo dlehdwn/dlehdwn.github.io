@@ -1,0 +1,168 @@
+import pygame
+import random
+
+# Pygame 초기화
+pygame.init()
+
+# 화면 크기 설정
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 400
+
+# 색상 정의
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+YELLOW = (255, 255, 0)
+RED = (255, 0, 0)
+BLUE = (0, 0, 255)
+
+# 블록 크기 설정
+BLOCK_SIZE = 20
+
+# 화면 초기화
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("팩맨 게임")
+
+# 팩맨 클래스
+class Pacman:
+    def __init__(self):
+        self.x = BLOCK_SIZE * 5
+        self.y = BLOCK_SIZE * 5
+        self.speed = BLOCK_SIZE
+        self.direction = pygame.K_RIGHT
+
+    def move(self):
+        if self.direction == pygame.K_RIGHT:
+            self.x += self.speed
+        elif self.direction == pygame.K_LEFT:
+            self.x -= self.speed
+        elif self.direction == pygame.K_UP:
+            self.y -= self.speed
+        elif self.direction == pygame.K_DOWN:
+            self.y += self.speed
+
+        # 화면 경계 안에 팩맨 유지
+        self.x = max(0, min(self.x, SCREEN_WIDTH - BLOCK_SIZE))
+        self.y = max(0, min(self.y, SCREEN_HEIGHT - BLOCK_SIZE))
+
+    def draw(self):
+        pygame.draw.circle(screen, YELLOW, (self.x + BLOCK_SIZE // 2, self.y + BLOCK_SIZE // 2), BLOCK_SIZE // 2)
+
+# 유령 클래스
+class Ghost:
+    def __init__(self):
+        self.x = random.randint(0, SCREEN_WIDTH // BLOCK_SIZE - 1) * BLOCK_SIZE
+        self.y = random.randint(0, SCREEN_HEIGHT // BLOCK_SIZE - 1) * BLOCK_SIZE
+        self.speed = BLOCK_SIZE
+
+    def move(self):
+        direction = random.choice([pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN])
+        if direction == pygame.K_RIGHT:
+            self.x += self.speed
+        elif direction == pygame.K_LEFT:
+            self.x -= self.speed
+        elif direction == pygame.K_UP:
+            self.y -= self.speed
+        elif direction == pygame.K_DOWN:
+            self.y += self.speed
+
+        # 화면 경계 안에 유령 유지
+        self.x = max(0, min(self.x, SCREEN_WIDTH - BLOCK_SIZE))
+        self.y = max(0, min(self.y, SCREEN_HEIGHT - BLOCK_SIZE))
+
+    def draw(self):
+        pygame.draw.rect(screen, RED, (self.x, self.y, BLOCK_SIZE, BLOCK_SIZE))
+
+# 맵 그리기 함수
+def draw_map(level):
+    map_data = level
+    for row in range(len(map_data)):
+        for col in range(len(map_data[row])):
+            if map_data[row][col] == 1:  # 1은 벽
+                pygame.draw.rect(screen, BLUE, (col * BLOCK_SIZE, row * BLOCK_SIZE, BLOCK_SIZE, BLOCK_SIZE))
+            elif map_data[row][col] == 0:  # 0은 점
+                pygame.draw.circle(screen, WHITE, (col * BLOCK_SIZE + BLOCK_SIZE // 2, row * BLOCK_SIZE + BLOCK_SIZE // 2), BLOCK_SIZE // 4)
+
+# 메인 게임 루프
+def main():
+    pacman = Pacman()
+    ghost = Ghost()
+    score = 0
+    level = 1
+
+    # 각 레벨의 맵 정의 (0 = 점, 1 = 벽)
+    maps = [
+        [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 1, 1, 1, 1, 0, 1, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ],
+        [
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 1],
+            [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+        ]
+    ]
+
+    current_map = maps[level - 1]
+
+    clock = pygame.time.Clock()
+    running = True
+
+    while running:
+        screen.fill(BLACK)
+
+        # 이벤트 처리
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key in [pygame.K_RIGHT, pygame.K_LEFT, pygame.K_UP, pygame.K_DOWN]:
+                    pacman.direction = event.key
+
+        # 팩맨과 유령 이동
+        pacman.move()
+        ghost.move()
+
+        # 맵 그리기
+        draw_map(current_map)
+
+        # 팩맨과 유령 그리기
+        pacman.draw()
+        ghost.draw()
+
+        # 팩맨과 유령의 충돌 체크
+        if pacman.x == ghost.x and pacman.y == ghost.y:
+            print("게임 오버!")
+            running = False
+
+        # 점 먹기 및 점수 업데이트
+        row, col = pacman.y // BLOCK_SIZE, pacman.x // BLOCK_SIZE
+        if current_map[row][col] == 0:
+            score += 10
+            current_map[row][col] = -1  # 먹은 점은 -1로 표시
+            print(f"점수: {score}")
+
+        # 모든 점을 먹었는지 확인
+        if all(current_map[row][col] != 0 for row in range(len(current_map)) for col in range(len(current_map[0]))):
+            print("스테이지 클리어!")
+            level += 1
+            if level <= len(maps):
+                current_map = maps[level - 1]
+            else:
+                print("게임 승리!")
+                running = False
+
+        # 화면 업데이트
+        pygame.display.flip()
+
+        # 프레임 레이트 제한
+        clock.tick(10)
+
+    pygame.quit()
+
+if __name__ == "__main__":
+    main()
